@@ -20,19 +20,20 @@ Add new testcase to corpus:
 ```bash
 ./tools/convert.sh <bytecode in hex> ../fuzzer/coprus/<filename> 
 ```
-Move duplicates out of corpus:
+Remove duplicates from the corpus:
 ```
+cd fuzzer/corpus
 find . -name '*-[0-9]*' -delete
 ```
-For corpus testdata to make vim not append \n at the end of the file do:
+Make vim not append \n at the end of the file do:
 ```bash
 :set noendofline and :set nofixendofline 
 ```
 
 ## TODO
-- Clean up repo
 - Repeat single testcases 
 - Branch for thesis
+- Branch for bsides
 - don't add dup testcases to corpus
 - Setup LibAFL with new Components
     - Define custom objective
