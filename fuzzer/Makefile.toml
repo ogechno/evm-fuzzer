@@ -1,0 +1,73 @@
+[tasks.clean-cargo]
+cwd = "/src/fuzzer"
+script = """
+cargo clean
+"""
+
+[tasks.clean-fuzzer]
+cwd = "/src/fuzzer"
+script = """
+rm -f fuzzer || true
+"""
+
+[tasks.clean-evmone]
+cwd = "/src/third-party/evmone"
+script = """
+find . -name 'CMakeCache.txt' -delete
+rm -rf build/ || true
+"""
+
+[tasks.clean-geth]
+cwd = "/src/geth"
+script = """
+rm -f libgoexecute.h libgoexecute.so || true
+"""
+
+[tasks.clean]
+dependencies = ["clean-cargo", "clean-fuzzer", "clean-evmone", "clean-geth"]
+
+[tasks.build-compilers]
+script = """
+cargo build
+"""
+
+[tasks.build-evmone]
+cwd = "/src/third-party/evmone"
+script = """
+cmake -S . -B build -DCMAKE_THREAD_LIBS_INIT="-lpthread" -DCMAKE_HAVE_THREADS_LIBRARY=1 -DCMAKE_USE_WIN32_THREADS_INIT=0 -DCMAKE_USE_PTHREADS_INIT=1 -DTHREADS_PREFER_PTHREAD_FLAG=ON -DBUILD_SHARED_LIBS=OFF -DCMAKE_C_COMPILER=/src/fuzzer/target/debug/libafl_cc -DCMAKE_CXX_COMPILER=/src/fuzzer/target/debug/libafl_cxx
+cmake --build build --parallel
+"""
+
+[tasks.build-geth]
+cwd = "/src/geth"
+script = """
+go build -o libgeth.so -buildmode=c-shared geth.go
+"""
+
+[tasks.build-fuzzer]
+cwd = "/src/third-party/evmone"
+script = """
+/src/fuzzer/target/debug/libafl_cxx -std=c++17 -I $(pwd)/lib -I $(pwd)/evmc/include -I $(pwd)/include -I $(pwd) -I /src/third-party/intx/include/ -I /src/third-party/ethash/include -o /src/fuzzer/fuzzer /src/evmone/harness.cpp /src/geth/libgeth.so $(pwd)/build/lib/libevmone-standalone.a -lm -ldl -lpthread -lstdc++ -lgcc -lutil -lrt
+"""
+
+# [tasks.build-fuzzer2]
+# cwd = "/src/third-party/evmone"
+# script = """
+# /src/fuzzer/target/debug/libafl_cxx -std=c++17 -o /src/fuzzer/fuzzer -Wl,--whole-archive /src/geth-fuzz.a -fprofile-instr-generate -fcoverage-mapping"""
+# # -lm -ldl -lpthread -lstdc++ -lgcc -lutil -lrt
+# 
+# 
+# [tasks.build2]
+# dependencies = ["build-compilers", "build-fuzzer2"]
+
+[tasks.geth-routine]
+dependencies = ["build-geth", "build-fuzzer"]
+
+[tasks.evmone-routine]
+dependencies = ["build-compilers", "build-geth", "clean-evmone", "build-evmone", "build-fuzzer"]
+
+[tasks.build]
+dependencies = ["build-compilers", "build-geth", "build-evmone", "build-fuzzer"]
+
+[tasks.rebuild]
+dependencies = ["clean", "build"]

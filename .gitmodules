@@ -1,0 +1,18 @@
+[submodule "third-party/intx"]
+	path = third-party/intx
+	url = https://github.com/chfast/intx
+[submodule "third-party/LibAFL"]
+	path = third-party/LibAFL
+	url = https://github.com/AFLplusplus/LibAFL/
+[submodule "third-party/evmone"]
+	path = third-party/evmone
+	url = https://github.com/ethereum/evmone
+[submodule "third-party/go-ethereum"]
+	path = third-party/go-ethereum
+	url = https://github.com/ethereum/go-ethereum
+[submodule "third-party/uint256"]
+	path = third-party/uint256
+	url = https://github.com/holiman/uint256
+[submodule "third-party/ethash"]
+	path = third-party/ethash
+	url = https://github.com/chfast/ethash
