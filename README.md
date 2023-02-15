@@ -1,7 +1,9 @@
 # evm-fuzzer
 ## Getting started
-1. Clone the evm-fuzzer repository with
+1. Clone the evm-fuzzer repository and download the submodules
 ```bash
+git clone https://github.com/ogechno/evm-fuzzer
+cd evm-fuzzer
 git submodule update --recursive
 ```
 2. Build the docker image using
