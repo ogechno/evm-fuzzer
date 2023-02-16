@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"math/big"
     "encoding/hex"
+    "os"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/eth/tracers/logger"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
@@ -20,22 +22,23 @@ import (
 var caller = common.HexToAddress("0001020000000000000000000000000000000000")
 // var addr = common.HexToAddress("1122334455667788991011121314151617181920")
 var addr = common.HexToAddress("0001020000000000000000000000000000000000")
-var londonBlock = big.NewInt(12_965_000);
+var londonBlock = big.NewInt(12_965_000)
 
-func build_vm_config() vm.Config {
+func build_vm_config(debugMode int64) vm.Config {
+    config := vm.Config{
+	    Debug:                   false,
+	    Tracer:                  nil,
+	    EnablePreimageRecording: false,
+    }
 
-//	tracer, err := tracers.New("", new(tracers.Context))
-    // tracer := logger.NewStructLogger(&logger.Config{
-	// 	Debug: false,
-	// 	//DisableStorage: true,
-	// 	//EnableMemory: false,
-	// 	//EnableReturnData: false,
-	// })
-	config := vm.Config{
-		Debug: false,
-		Tracer:                  nil, // tracer,
-		EnablePreimageRecording: false,
-	}
+    if debugMode != 0 {
+        config = vm.Config{
+	    	Debug:                   true,
+	    	Tracer:                  logger.NewJSONLogger(nil, os.Stdout),
+	    	EnablePreimageRecording: false,
+        }
+    }
+    
 	return config
 }
 
@@ -85,17 +88,20 @@ func build_txContext() vm.TxContext {
 	return txContext
 }
 
-//export ExecuteTestcase
-// returns gas left
-func ExecuteTestcase(bytecode []byte) uint64 {
+//export Fuzz
+func Fuzz(bytecode []byte, debug int64) uint64 {
     // gas := uint64(9223372036854775806)
     gas := uint64(1000)
     // fmt.Printf("The Code: %v\n", bytecode)
 
+    if debug != 0 {
+        fmt.Printf("geth trace")
+    }
+
 	vmctx := build_context()
 	txContext := build_txContext()
 	statedb := build_state_db(bytecode)
-	vmConfig := build_vm_config()
+	vmConfig := build_vm_config(debug)
 
     // TODO: Maybe do ones in inititlize
 	evm := vm.NewEVM(vmctx, txContext, statedb, params.MainnetChainConfig, vmConfig)
@@ -122,15 +128,9 @@ func ExecuteTestcase(bytecode []byte) uint64 {
 	}
 }
 
-//export Fuzz
-func Fuzz(data []byte) uint64 {
-    leftGas := ExecuteTestcase(data)
-	return leftGas
-}
-
 func main() {
     code := []byte{48, 49}
     hexcode := hex.EncodeToString(code)
     fmt.Println("Hexcode: %v", hexcode)
-    ExecuteTestcase(code)
+    Fuzz(code, 0)
 }

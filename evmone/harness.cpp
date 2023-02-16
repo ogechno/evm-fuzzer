@@ -46,17 +46,23 @@ void printBytesAsHex(std::string name, uint8_t *data, ssize_t size) {
     std::cout << std::endl;
 }
 
+extern "C" {
+    int* get_debug_mode();
+}
+
 extern "C" int LLVMFuzzerInitialize(int* argc, char*** argv) {
     return 0;
 }
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noexcept {
+    int* debug_mode = get_debug_mode();
     uint8_t *data2 = (uint8_t *)malloc(data_size);
     memcpy((void*)data2, (void*)data, data_size);
 
     // std::cout << "Execution of geth: " << std::endl;
     GoSlice goData = {(void *) data, (long long) data_size, (long long) data_size};
-    GoInt gas = Fuzz(goData);
+    GoInt debug = *debug_mode;
+    GoInt gas = Fuzz(goData, debug);
 
     // TODO: Create VM outside of TESTONINPUT Function
     // auto host = FuzzHost{};
@@ -66,7 +72,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
     // evmone::VM *vm = new evmone::VM{};
     // auto tracer = new evmone::Tracer{};
     // vm->add_tracer(tracer);
-    // printf("Activating tracing %d\n", vm.set_option("trace", ""));
+    if (*debug_mode)
+        printf("evmone trace: %d\n", vm.set_option("trace", ""));
 
     evmc_tx_context ctx = host.get_tx_context();
     // std::cout << "Tx context: " << ctx.block_timestamp << std::endl;
