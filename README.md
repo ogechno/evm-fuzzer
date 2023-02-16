@@ -32,9 +32,12 @@ Make vim not append \n at the end of the file do:
 
 ## TODO
 - Repeat single testcases 
+- Update evmone and geth to latest version
 - Branch for thesis
 - Branch for bsides
 - don't add dup testcases to corpus
+- split up harness
+- add nethermind and besu support
 - Setup LibAFL with new Components
     - Define custom objective
     - DiffExecutor, DiffObserver
