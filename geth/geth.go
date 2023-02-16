@@ -75,7 +75,8 @@ func build_context() vm.BlockContext {
         Time: new(big.Int).SetUint64(0),
 		GasLimit:    7992222,
 		Difficulty:  new(big.Int).SetUint64(0),
-        BaseFee:     big.NewInt(params.InitialBaseFee),
+        // BaseFee:     big.NewInt(params.InitialBaseFee),
+        BaseFee: big.NewInt(0),
 	}
 	return context
 }
@@ -95,7 +96,7 @@ func Fuzz(bytecode []byte, debug int64) uint64 {
     // fmt.Printf("The Code: %v\n", bytecode)
 
     if debug != 0 {
-        fmt.Printf("geth trace")
+        fmt.Println("geth trace")
     }
 
 	vmctx := build_context()

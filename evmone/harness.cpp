@@ -106,6 +106,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
     host.tx_context.block_timestamp = 0;
     host.tx_context.block_gas_limit = 7992222;
     host.tx_context.chain_id = evmc::uint256be{1};
+    // block_base_fee
 
     evmc::Result result = vm.execute(host, EVMC_LONDON, msg, data2, data_size);
     // evmone::hash256 stateRoot = host::stateRoot();
