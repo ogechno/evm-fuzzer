@@ -13,6 +13,21 @@
 [submodule "third-party/uint256"]
 	path = third-party/uint256
 	url = https://github.com/holiman/uint256
+[submodule "third-party/silkworm"]
+	path = third-party/silkworm
+	url = https://github.com/torquem-ch/silkworm
+[submodule "third-party/json"]
+	path = third-party/json
+	url = https://github.com/nlohmann/json
+[submodule "third-party/GSL"]
+	path = third-party/GSL
+	url = https://github.com/microsoft/GSL
+[submodule "third-party/abseil-cpp"]
+	path = third-party/abseil-cpp
+	url = https://github.com/abseil/abseil-cpp
+[submodule "third-party/expected"]
+	path = third-party/expected
+	url = https://github.com/TartanLlama/expected
 [submodule "third-party/ethash"]
 	path = third-party/ethash
 	url = https://github.com/chfast/ethash

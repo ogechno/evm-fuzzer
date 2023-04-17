@@ -12,7 +12,7 @@ git submodule update --recursive
 ```
 3. Build evm-fuzzer inside the running docker image
 ```bash
-./tools/build_and_run.sh
+./tools/run_cmake.sh
 ```
 
 ## Useful commands
@@ -30,8 +30,13 @@ Make vim not append \n at the end of the file do:
 :set noendofline and :set nofixendofline 
 ```
 
+## TODO: silkworm
+- build script
+- pass code to call
+
 ## TODO
-- Repeat single testcases 
+- (PowerSchedeuler)
+- check MAX_EDGES_NUM (ist 0????)
 - Update evmone and geth to latest version
 - Don't create new vm for every testcase
 - Branch for thesis
@@ -47,3 +52,4 @@ Make vim not append \n at the end of the file do:
 - Geth harness clean up with Config and NewEnv (runtime)
 - tmin corpus minimizer
 - Grammar Mutator
+- put all targets into targets folder
