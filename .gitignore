@@ -25,3 +25,7 @@ geth/libgeth.h
 
 Notes.md
 archive/
+
+build/
+*.profraw
+fuzzer/time.txt

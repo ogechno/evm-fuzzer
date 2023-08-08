@@ -16,3 +16,6 @@
 [submodule "third-party/ethash"]
 	path = third-party/ethash
 	url = https://github.com/chfast/ethash
+[submodule "third-party/silkworm"]
+	path = third-party/silkworm
+	url = https://github.com/torquem-ch/silkworm

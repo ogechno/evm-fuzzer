@@ -17,7 +17,7 @@ use libafl::{
     corpus::{
         Corpus, InMemoryCorpus, OnDiskCorpus,
     },
-    schedulers::{QueueScheduler, IndexesLenTimeMinimizerScheduler},
+    schedulers::{IndexesLenTimeMinimizerScheduler, powersched::PowerSchedule,PowerQueueScheduler},
     events::SimpleEventManager,
     feedback_or,
     executors::{inprocess::InProcessExecutor, ExitKind},
@@ -25,9 +25,11 @@ use libafl::{
     fuzzer::{Fuzzer, StdFuzzer},
     inputs::{BytesInput, HasTargetBytes},
     monitors::SimpleMonitor,
-    mutators::scheduled::{havoc_mutations, StdScheduledMutator},
+    mutators::{
+        scheduled::{havoc_mutations, StdScheduledMutator},
+    },
     observers::{HitcountsMapObserver, StdMapObserver, TimeObserver},
-    stages::{mutational::StdMutationalStage, calibrate::CalibrationStage},
+    stages::{ power::StdPowerMutationalStage, calibrate::CalibrationStage },
     state::{HasCorpus, StdState},
 };
 
@@ -116,16 +118,17 @@ pub fn libafl_main() {
         }
 
         let mutator = StdScheduledMutator::new(havoc_mutations());
-        let mut stages = tuple_list!(StdMutationalStage::new(mutator), calibration);
+        let power = StdPowerMutationalStage::new(mutator, &edges_observer);
+        let mut stages = tuple_list!(calibration, power);
 
-        let scheduler = IndexesLenTimeMinimizerScheduler::new(QueueScheduler::new());
+        let scheduler = IndexesLenTimeMinimizerScheduler::new(PowerQueueScheduler::new(PowerSchedule::FAST));
         let mut fuzzer = StdFuzzer::new(scheduler, feedback, objective);
 
         let mut harness = |input: &BytesInput| {
             let target = input.target_bytes();
             let buf: &[u8] = target.as_slice();
-
-            if libfuzzer_test_one_input(buf) != 0 { // "0x6000".as_bytes()
+            
+            if libfuzzer_test_one_input(buf) != 0 {
                 ExitKind::Crash
             } else {
                 ExitKind::Ok
