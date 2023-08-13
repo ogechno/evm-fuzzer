@@ -31,11 +31,8 @@ Make vim not append \n at the end of the file do:
 ```
 
 ## TODO
-- Repeat single testcases 
 - Update evmone and geth to latest version
 - Don't create new vm for every testcase
-- Branch for thesis
-- Branch for bsides
 - don't add dup testcases to corpus
 - split up harness
 - add nethermind and besu support
