@@ -6,6 +6,7 @@
 #include <evmone/evmone.h>
 #include <evmone/tracing.hpp>
 #include <evmone/vm.hpp>
+#include <evmone/instructions_traits.hpp>
 
 #include <silkworm/core/execution/evm.hpp>
 #include <silkworm/core/state/in_memory_state.hpp>
@@ -13,6 +14,7 @@
 #include <silkworm/core/common/cast.hpp>
 #include <silkworm/core/common/util.hpp>
 #include <silkworm/core/common/base.hpp>
+#include <silkworm/core/execution/evm.hpp>
 
 #include <signal.h>
 #include <unistd.h>
@@ -66,13 +68,121 @@ extern "C" void sigterm_handler(int sig) {
     }
 }
 
+class TestTracer : public silkworm::EvmTracer {
+  public:
+    explicit TestTracer(std::optional<evmc::address> contract_address = std::nullopt,
+                        std::optional<evmc::bytes32> key = std::nullopt)
+        : contract_address_(contract_address), key_(key), rev_{}, msg_{} {}
+
+    std::string get_name(uint8_t opcode) {
+        // TODO: Create constexpr tables of names (maybe even per revision).
+        const auto name = evmone::instr::traits[opcode].name;
+        return (name != nullptr) ? name : "0x" + evmc::hex(opcode);
+    }
+
+    void output_stack(const intx::uint256* stack_top, int stack_height) {
+        std::cout << R"(,"stack":[)";
+        const auto stack_end = stack_top + 1;
+        const auto stack_begin = stack_end - stack_height;
+        for (auto it = stack_begin; it != stack_end; ++it)
+        {
+            if (it != stack_begin)
+                std::cout << ',';
+            std::cout << R"("0x)" << to_string(*it, 16) << '"';
+        }
+        std::cout << ']';
+    }
+
+    void on_execution_start(evmc_revision rev, const evmc_message& msg, evmone::bytes_view bytecode) noexcept override {
+        execution_start_called_ = true;
+        rev_ = rev;
+        msg_ = msg;
+        bytecode_ = silkworm::Bytes{bytecode};
+
+        std::cout << "{";
+        std::cout << R"("depth":)" << msg.depth;
+        std::cout << R"(,"rev":")" << rev << '"';
+        std::cout << R"(,"static":)" << (((msg.flags & EVMC_STATIC) != 0) ? "true" : "false");
+        std::cout << "}\n";
+    }
+    void on_instruction_start(uint32_t pc, const intx::uint256* stack_top, int stack_height,
+                              const evmone::ExecutionState& state,
+                              const silkworm::IntraBlockState& intra_block_state) noexcept override {
+        pc_stack_.push_back(pc);
+        memory_size_stack_[pc] = state.memory.size();
+        if (contract_address_) {
+            storage_stack_[pc] =
+                intra_block_state.get_current_storage(contract_address_.value(), key_.value_or(evmc::bytes32{}));
+        }
+
+        evmc_address addr = {{0, 1, 2}};
+        auto opcode = intra_block_state.get_code(addr)[pc];
+
+        std::cout << "{";
+        std::cout << R"("pc":)" << std::dec << pc;
+        std::cout << R"(,"op":)" << std::dec << int{opcode};
+        std::cout << R"(,"opName":")" << get_name(opcode) << '"';
+        std::cout << R"(,"gas":)" << std::hex << "0x" << state.gas_left;
+        output_stack(stack_top, stack_height);
+
+        // Full memory can be dumped as evmc::hex({state.memory.data(), state.memory.size()}),
+        // but this should not be done by default. Adding --tracing=+memory option would be nice.
+        std::cout << R"(,"memorySize":)" << std::dec << state.memory.size();
+
+        std::cout << "}\n";
+    }
+    void on_execution_end(const evmc_result& res, const silkworm::IntraBlockState& intra_block_state) noexcept override {
+        execution_end_called_ = true;
+        const auto gas_left = static_cast<uint64_t>(res.gas_left);
+        const auto gas_refund = static_cast<uint64_t>(res.gas_refund);
+        result_ = {res.status_code, gas_left, gas_refund, {res.output_data, res.output_size}};
+        if (contract_address_ && !pc_stack_.empty()) {
+            const auto pc = pc_stack_.back();
+            storage_stack_[pc] =
+                intra_block_state.get_current_storage(contract_address_.value(), key_.value_or(evmc::bytes32{}));
+        }
+    }
+
+    void on_creation_completed(const evmc_result& /*result*/, const silkworm::IntraBlockState& /*intra_block_state*/) noexcept override {
+        creation_completed_called_ = true;
+    }
+
+    void on_precompiled_run(const evmc_result& /*result*/, int64_t /*gas*/,
+                            const silkworm::IntraBlockState& /*intra_block_state*/) noexcept override {}
+    void on_reward_granted(const silkworm::CallResult& /*result*/,
+                           const silkworm::IntraBlockState& /*intra_block_state*/) noexcept override {}
+
+    [[nodiscard]] bool execution_start_called() const { return execution_start_called_; }
+    [[nodiscard]] bool execution_end_called() const { return execution_end_called_; }
+    [[nodiscard]] bool creation_completed_called() const { return creation_completed_called_; }
+    [[nodiscard]] const silkworm::Bytes& bytecode() const { return bytecode_; }
+    [[nodiscard]] const evmc_revision& rev() const { return rev_; }
+    [[nodiscard]] const evmc_message& msg() const { return msg_; }
+    [[nodiscard]] const std::vector<uint32_t>& pc_stack() const { return pc_stack_; }
+    [[nodiscard]] const std::map<uint32_t, std::size_t>& memory_size_stack() const { return memory_size_stack_; }
+    [[nodiscard]] const std::map<uint32_t, evmc::bytes32>& storage_stack() const { return storage_stack_; }
+    [[nodiscard]] const silkworm::CallResult& result() const { return result_; }
+
+  private:
+    bool execution_start_called_{false};
+    bool execution_end_called_{false};
+    bool creation_completed_called_{false};
+    std::optional<evmc::address> contract_address_;
+    std::optional<evmc::bytes32> key_;
+    evmc_revision rev_;
+    evmc_message msg_;
+    silkworm::Bytes bytecode_;
+    std::vector<uint32_t> pc_stack_;
+    std::map<uint32_t, std::size_t> memory_size_stack_;
+    std::map<uint32_t, evmc::bytes32> storage_stack_;
+    silkworm::CallResult result_;
+};
+
 extern "C" int LLVMFuzzerInitialize(int *argc, char ***argv) {
     std::cerr << "Initializing fuzzer..." << std::endl;
     signal(SIGTERM, sigterm_handler);
     return 0;
 }
-
-// #include <silkworm/silkrpc/core/evm_trace.hpp>
 
 #include "geth/libgeth.h"
 
@@ -106,27 +216,28 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
     state.set_balance(addr, intx::uint256(0));
     state.set_code(addr, code_bytes);
     
-    silkworm::EVM vm{block, state, silkworm::kMainnetConfig};
-    silkworm::EvmHost host{vm};
+    silkworm::EVM evm{block, state, silkworm::kMainnetConfig};
+    silkworm::EvmHost host{evm};
 
     silkworm::Transaction txn{};
     txn.from = addr;
     txn.to = addr;
-
     
     // TODO: change to new API
-    // if (*debug_mode) {
-    //     auto tracer = new silkworm::rpc::trace::VmTraceTracer{};
-    //     vm.add_tracer(tracer);
-    // }
+    if (*debug_mode) {
+        printf("EVMONE Trace:\n");
+        TestTracer tracer;
+        evm.add_tracer(tracer);
+    }
 
-    silkworm::CallResult result{vm.execute(txn, GAS)};
+    silkworm::CallResult result{evm.execute(txn, GAS)};
     
     // std::cout << silkworm::to_hex(db.state_root_hash()) << std::endl;
-
+ 
     free((void *)data2);
 
     if (result.status != EVMC_SUCCESS) {
+        // std::cout << "EVMC NO SUCCESS: " << result.status << std::endl;
         result.gas_left = GAS;
     }
 

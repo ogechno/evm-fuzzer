@@ -19,4 +19,6 @@ RUN tar -C /usr/local -xvzf go1.19.linux-amd64.tar.gz
 ENV PATH=$PATH:/usr/local/go/bin:/root/go/bin
 RUN go install github.com/dvyukov/go-fuzz/go-fuzz-build@latest
 
-RUN apt remove gcc
+RUN apt remove -y gcc
+
+# RUN apt install -y libboost-all-dev

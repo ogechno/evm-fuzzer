@@ -73,7 +73,7 @@ func build_context() vm.BlockContext {
 		BlockNumber: londonBlock,
         // Time: big.NewInt(time.Now().Unix()),
         Time: new(big.Int).SetUint64(0),
-		GasLimit:    7992222,
+		GasLimit:    0, // 7992222
 		Difficulty:  new(big.Int).SetUint64(0),
         // BaseFee:     big.NewInt(params.InitialBaseFee),
         BaseFee: big.NewInt(0),
@@ -84,7 +84,7 @@ func build_context() vm.BlockContext {
 func build_txContext() vm.TxContext {
 	txContext := vm.TxContext{
 		Origin:   caller,
-		GasPrice: new(big.Int).SetUint64(0x5af3107a4000),
+		GasPrice: new(big.Int).SetUint64(0), // 0x5af3107a4000
 	}
 	return txContext
 }
@@ -109,9 +109,9 @@ func Fuzz(bytecode []byte, debug int64) uint64 {
     // fmt.Printf("Chain Config: %v\n", params.MainnetChainConfig.IsLondon(londonBlock))
     // fmt.Printf("Chain Config: %v\n", params.MainnetChainConfig.Rules(londonBlock, false).IsLondon)
 
-    if rules := params.MainnetChainConfig.Rules(londonBlock, evm.Context.Random != nil); rules.IsBerlin {
-		statedb.PrepareAccessList(caller, &addr, vm.ActivePrecompiles(rules), nil)
-	}
+    // if rules := params.MainnetChainConfig.Rules(londonBlock, evm.Context.Random != nil); rules.IsBerlin {
+	// 	statedb.PrepareAccessList(caller, &addr, vm.ActivePrecompiles(rules), nil)
+	// }
     
 	var emptyInput []byte
     // TODO: Maybe also Fuzz Create and Execute
